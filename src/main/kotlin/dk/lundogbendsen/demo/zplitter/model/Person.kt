@@ -10,6 +10,6 @@ class Person (
     @Column(nullable = false)
     public val name: String,
     @ManyToMany
-    public val events : List<Event> = emptyList()
+    public val events : MutableList<Event> = mutableListOf()
 )
 

@@ -1,4 +1,4 @@
-package dk.lundogbendsen.demo.zplitter.infrastructure.init
+package dk.lundogbendsen.demo.zplitter.infrastructure
 
 import dk.lundogbendsen.demo.zplitter.dao.EventRepository
 import dk.lundogbendsen.demo.zplitter.model.Event
@@ -33,6 +33,9 @@ class DatabaseInitializer : ApplicationListener<ContextRefreshedEvent?> {
         val karen = Person(null, "Karen")
         rf.persons.add(karen)
         karen.events.add(rf)
+
+        repo.save(rf)
+
         log.info("End creating data...")
     }
 }

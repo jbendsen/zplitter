@@ -12,6 +12,6 @@ data class Event (
     public val name: String,
 
     @ManyToMany(cascade = [CascadeType.ALL], mappedBy = "events")
-    public val persons: List<Person> = ArrayList<Person>()
+    public val persons: MutableList<Person> = mutableListOf()
 
 )
