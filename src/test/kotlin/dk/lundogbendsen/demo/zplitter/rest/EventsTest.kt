@@ -61,13 +61,13 @@ class EventsTest : AbstractRestTest() {
 
     @Test
     @Sql("/integration_test_cleanup.sql")
-    fun getProductById() {
+    fun getEventById() {
         val createEvent = createEvent()
 
         //get all events
         val result = mvc!!.perform(get("/api/events/${createEvent.id}")
                 .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk)
+                .andExpect(status().isFound)
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
         val s = result.response.contentAsString
         val event  = ObjectMapper().readValue<EventModel>(s)

@@ -33,9 +33,13 @@ dependencies {
 	implementation("org.jetbrains.kotlin:kotlin-reflect")
 	implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 	implementation("org.springframework.data:spring-data-rest-hal-browser")
+
 	// https://mvnrepository.com/artifact/com.jayway.jsonpath/json-path
 
 	implementation("com.jayway.jsonpath:json-path:2.4.0")
+
+	implementation ("org.springdoc:springdoc-openapi-core:1.1.49")
+	implementation ("org.springdoc:springdoc-openapi-ui:1.1.49")
 
 	runtimeOnly("com.h2database:h2")
 	testImplementation("org.springframework.boot:spring-boot-starter-test") {

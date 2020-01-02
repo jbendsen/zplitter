@@ -12,6 +12,7 @@ import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
+import java.util.*
 
 
 @RestController
@@ -20,9 +21,6 @@ class Events {
 
     @Autowired
     lateinit var repo: EventRepository
-
-    @Value("\${application.name}")
-    var appname = "n/a"
 
     @Transactional
     @PostMapping(consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -40,22 +38,20 @@ class Events {
     fun list(): List<EventModel> {
         val list = repo.findAll()
         return list.map { it ->
-            val event = EventModel(it?.id, it!!.name)
-            event.persons.addAll(it.persons.map { person ->
-                getPersonModel(person.id, person.name)
-            })
-            if (it.id != null) {
-                val linkToSelf = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(Events::class.java).findById(it.id)).withSelfRel()
-                event.add(linkToSelf)
-            }
-            event
+            getEventModel(it)
+
         }
     }
 
     @Transactional
     @GetMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
-    fun findById(@PathVariable("id") id: Long): EventModel {
-        return EventModel(repo.findById(id).get());
+    fun findById(@PathVariable("id") id: Long): ResponseEntity<EventModel> {
+        val event: Optional<Event?> = repo.findById(id)
+        if (event.isPresent) {
+            return ResponseEntity(getEventModel(event.get()), HttpStatus.FOUND);
+        } else {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
     }
 
     private fun getPersonModel(id: Long?, name: String): PersonModel {
@@ -67,4 +63,16 @@ class Events {
         return personModel
     }
 
+    private fun getEventModel(event: Event?): EventModel {
+        if (event == null) throw NullPointerException("event must not be null!")
+        val eventModel = EventModel(event.id, event.name)
+        eventModel.persons.addAll(event.persons.map { person ->
+            getPersonModel(person.id, person.name)
+        })
+        if (event.id != null) {
+            val linkToSelf = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(Events::class.java).findById(event.id)).withSelfRel()
+            eventModel.add(linkToSelf)
+        }
+        return eventModel
+    }
 }
