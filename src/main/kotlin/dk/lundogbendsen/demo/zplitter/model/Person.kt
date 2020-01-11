@@ -9,7 +9,7 @@ class Person (
     public val id: Long? = null,
     @Column(nullable = false)
     public val name: String,
-    @ManyToMany
+    @ManyToMany(cascade = [CascadeType.PERSIST,CascadeType.DETACH, CascadeType.MERGE, CascadeType.REFRESH])
     public val events : MutableList<Event> = mutableListOf()
 )
 

@@ -8,9 +8,9 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.http.MediaType
 import org.springframework.test.context.jdbc.Sql
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.util.ArrayList
 
 
 class EventsTest : AbstractRestTest() {
@@ -73,6 +73,45 @@ class EventsTest : AbstractRestTest() {
         val event  = ObjectMapper().readValue<EventModel>(s)
         assertTrue(event.name == createEvent.name);
         assertTrue(event.id == createEvent.id);
+    }
+
+    @Test
+    @Sql("/integration_test_cleanup.sql")
+    fun deleteEventTest() {
+        //create a new event
+        val event = EventModel(null, "Tinderbox")
+        val result = mvc!!.perform(post("/api/events")
+                .content(asJsonString(event))
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+        val s = result.response.contentAsString
+        val resultEvent = ObjectMapper().readValue(s, EventModel::class.java)
+
+        //get all events and save number of events
+        val result2 = mvc!!.perform(get("/api/events")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+        val s2 = result2.response.contentAsString
+        val resultEvent2 = ObjectMapper().readValue(s2, ArrayList::class.java)
+        val startSize = resultEvent2.size
+
+        //delete the just greated event
+        mvc!!.perform(delete("/api/events/${resultEvent.id}")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+
+        //get all events and assure that there is one less
+        val result4 = mvc!!.perform(get("/api/events")
+                .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk)
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+        val s4 = result4.response.contentAsString
+        val resultEvent4 = ObjectMapper().readValue(s4, ArrayList::class.java)
+        val endSize = resultEvent4.size
+        assertTrue(startSize-1==endSize)
     }
 
 

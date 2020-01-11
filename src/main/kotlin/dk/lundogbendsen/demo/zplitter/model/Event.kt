@@ -11,7 +11,9 @@ data class Event (
     @Column(nullable = false)
     public val name: String,
 
-    @ManyToMany(cascade = [CascadeType.ALL], mappedBy = "events")
-    public val persons: MutableList<Person> = mutableListOf()
+    @ManyToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH], mappedBy = "events")
+    public val persons: MutableList<Person> = mutableListOf(),
 
+    @OneToMany(cascade = [CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH, CascadeType.DETACH], mappedBy = "event")
+    public val expenses: MutableList<Expense> = mutableListOf()
 )

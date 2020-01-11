@@ -7,5 +7,4 @@ import java.util.*
 
 interface PersonRepository : JpaRepository<Person?, Long?> {
     fun findByName(name: String?): List<Person?>?
-    override fun findById(id: Long): Optional<Person?>
 }
