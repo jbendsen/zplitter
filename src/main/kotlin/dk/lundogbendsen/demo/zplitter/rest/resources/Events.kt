@@ -8,6 +8,7 @@ import dk.lundogbendsen.demo.zplitter.model.Event
 import dk.lundogbendsen.demo.zplitter.model.Expense
 import dk.lundogbendsen.demo.zplitter.rest.dto.EventDto
 import dk.lundogbendsen.demo.zplitter.rest.dto.ExpenseDto
+import dk.lundogbendsen.demo.zplitter.rest.dto.PersonDto
 import dk.lundogbendsen.demo.zplitter.rest.model.ExpenseModel
 import dk.lundogbendsen.demo.zplitter.rest.model.PersonModel
 import org.springframework.beans.factory.annotation.Autowired
@@ -58,7 +59,7 @@ class Events {
     fun findById(@PathVariable("id") id: Long): ResponseEntity<EventModel> {
         val event: Optional<Event?> = eventRepo.findById(id)
         if (event.isPresent) {
-            return ResponseEntity(getEventModel(event.get()), HttpStatus.FOUND);
+            return ResponseEntity(getEventModel(event.get()), HttpStatus.OK);
         } else {
             return ResponseEntity(HttpStatus.NOT_FOUND)
         }
@@ -97,6 +98,48 @@ class Events {
         return ResponseEntity(expenseModel, HttpStatus.CREATED);
 
     }
+
+
+    @Transactional
+    @PostMapping("/{id}/persons", produces = [MediaType.APPLICATION_JSON_VALUE], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    fun addPerson(@PathVariable("id") eventId: Long, @RequestBody personDto: PersonDto): ResponseEntity<PersonModel> {
+        val eventOpt: Optional<Event?> = eventRepo.findById(eventId)
+
+        if (!eventOpt.isPresent) {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
+        val event = eventOpt.get()
+
+        if (personDto.id == null) {
+            return ResponseEntity(HttpStatus.BAD_REQUEST)
+        }
+
+
+        val personOpt = personRepo.findById(personDto.id)
+        if (!personOpt.isPresent) {
+            return ResponseEntity(HttpStatus.BAD_REQUEST)
+        }
+
+        val person = personOpt.get()
+
+        event.persons.add(person)
+        person.events.add(event)
+
+        val personModel = PersonModel(person)
+
+        if (person.id != null) {
+            val linkToPerson = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(Persons::class.java).findById(person.id)).withRel("self")
+            personModel.add(linkToPerson)
+        }
+        person.events.forEach {
+            if (it.id!=null) {
+                val linkToEvent = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(Events::class.java).findById(it.id)).withRel("person.event")
+                personModel.add(linkToEvent)
+            }
+        }
+        return ResponseEntity(personModel, HttpStatus.CREATED);
+    }
+
 
     @Transactional
     @DeleteMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])

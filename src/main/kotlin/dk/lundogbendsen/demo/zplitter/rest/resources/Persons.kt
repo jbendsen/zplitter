@@ -1,7 +1,11 @@
 package dk.lundogbendsen.demo.zplitter.rest.resources
 
 import dk.lundogbendsen.demo.zplitter.dao.PersonRepository
+import dk.lundogbendsen.demo.zplitter.model.Event
 import dk.lundogbendsen.demo.zplitter.model.Person
+import dk.lundogbendsen.demo.zplitter.rest.dto.EventDto
+import dk.lundogbendsen.demo.zplitter.rest.dto.PersonDto
+import dk.lundogbendsen.demo.zplitter.rest.model.EventModel
 import dk.lundogbendsen.demo.zplitter.rest.model.PersonModel
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.hateoas.Link
@@ -35,16 +39,25 @@ open class Persons {
             val linkToSelf = linkTo(methodOn(Persons::class.java).findById(person.id)).withSelfRel()
             personModel.add(linkToSelf)
         }
-        return ResponseEntity<PersonModel>(personModel, HttpStatus.FOUND)
+        return ResponseEntity<PersonModel>(personModel, HttpStatus.OK)
 
     }
 
     @Transactional
     @GetMapping(produces = [MediaType.APPLICATION_JSON_VALUE])
     fun list(): List<PersonModel> {
-        repo.save(Person(name = "Kiefer ${System.currentTimeMillis()}"))
         val list = repo.findAll()
         return list.map { it -> getPersonModel(it?.id ?: 0, it?.name ?: "n/a") }
+    }
+
+    @Transactional
+    @PostMapping(consumes = [MediaType.APPLICATION_JSON_VALUE], produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun create(@RequestBody person: PersonDto): ResponseEntity<PersonModel> {
+        if (person.id != null) {
+            return ResponseEntity(HttpStatus.EXPECTATION_FAILED)
+        }
+        val saved = repo.save(Person(null, person.name))
+        return ResponseEntity(PersonModel(saved), HttpStatus.CREATED)
     }
 
     private fun getPersonModel(id: Long, name: String): PersonModel {
