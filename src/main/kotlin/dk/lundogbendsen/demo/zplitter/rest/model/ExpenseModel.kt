@@ -15,4 +15,6 @@ open class ExpenseModel(id:Long?, description:String, amount:Double) : Represent
     constructor(expense : Expense) :
         this(expense.id, expense.description, expense.amount) {
     }
+
+    constructor() : this(null, "", 0.0)
 }

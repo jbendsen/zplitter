@@ -65,7 +65,8 @@ class EventsTest : AbstractRestTest() {
         val expensesResponse = mvc!!.perform(get("/api/events/${event.id}/expenses"))
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
 
-        val expenseModels = ObjectMapper().readValue(expensesResponse.response.contentAsString, ExpenseModel::class.java)
+        val list  = ObjectMapper().readValue<List<ExpenseModel>>(expensesResponse.response.contentAsString)
+        assertEquals(4, list.size)
 
 
     }
