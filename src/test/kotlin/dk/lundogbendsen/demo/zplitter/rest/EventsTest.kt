@@ -2,8 +2,10 @@ package dk.lundogbendsen.demo.zplitter.rest
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import dk.lundogbendsen.demo.zplitter.rest.dto.ExpenseDto
 import dk.lundogbendsen.demo.zplitter.rest.dto.PersonDto
 import dk.lundogbendsen.demo.zplitter.rest.model.EventModel
+import dk.lundogbendsen.demo.zplitter.rest.model.ExpenseModel
 import dk.lundogbendsen.demo.zplitter.rest.model.PersonModel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -21,6 +23,51 @@ class EventsTest : AbstractRestTest() {
     @BeforeEach
     override fun setUp() {
         super.setUp()
+    }
+
+
+    @Test()
+    @Sql("/integration_test_cleanup.sql")
+    fun testTransfers() {
+        val event = createEvent()
+
+        //create persons
+        val persons = listOf<PersonModel>(createPerson("Anne"), createPerson("Burt"), createPerson("Chloe"), createPerson("Dale"))
+
+        //add persons to event
+        persons.map{it -> PersonDto(it.id, it.name)}.forEach{
+            mvc!!.perform(post("/api/events/${event.id}/persons")
+                    .content(asJsonString(it))
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isCreated())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+        }
+
+        //expenses
+        val expenses = listOf<ExpenseDto>(
+                ExpenseDto(null, "Food1", 100.0, persons?.get(0).id ?: 0),
+                ExpenseDto(null, "Food2", 200.0, persons?.get(1).id ?: 0),
+                ExpenseDto(null, "Food3", 300.0, persons?.get(2).id ?: 0),
+                ExpenseDto(null, "Food4", 400.0, persons?.get(3).id ?: 0)
+        )
+
+        //add expenses to event
+        expenses.forEach { exp ->
+            mvc!!.perform(post("/api/events/${event.id}/expenses")
+                    .content(asJsonString(exp))
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isCreated())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+        }
+
+        println()
+
+        val expensesResponse = mvc!!.perform(get("/api/events/${event.id}/expenses"))
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+
+        val expenseModels = ObjectMapper().readValue(expensesResponse.response.contentAsString, ExpenseModel::class.java)
+
+
     }
 
     @Test
@@ -50,10 +97,10 @@ class EventsTest : AbstractRestTest() {
 
         persons.map{it -> PersonDto(it.id, it.name)}.forEach{
             mvc!!.perform(post("/api/events/${event.id}/persons")
-            .content(asJsonString(it))
-            .contentType(MediaType.APPLICATION_JSON))
-            .andExpect(status().isCreated())
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
+                    .content(asJsonString(it))
+                    .contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isCreated())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON)).andReturn()
         }
 
         val result = mvc!!.perform(get("/api/events/${event.id}")
@@ -65,6 +112,8 @@ class EventsTest : AbstractRestTest() {
         assertEquals(3, event2.persons.size)
         persons.forEach{ assertTrue(event2.persons.contains(it))}
     }
+
+
 
     @Test
     @Sql("/integration_test_cleanup.sql")

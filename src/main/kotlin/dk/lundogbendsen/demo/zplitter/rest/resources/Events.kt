@@ -3,14 +3,13 @@ package dk.lundogbendsen.demo.zplitter.rest.resources
 import dk.lundogbendsen.demo.zplitter.dao.EventRepository
 import dk.lundogbendsen.demo.zplitter.dao.ExpenseRepository
 import dk.lundogbendsen.demo.zplitter.dao.PersonRepository
-import dk.lundogbendsen.demo.zplitter.rest.model.EventModel
 import dk.lundogbendsen.demo.zplitter.model.Event
 import dk.lundogbendsen.demo.zplitter.model.Expense
 import dk.lundogbendsen.demo.zplitter.rest.dto.EventDto
 import dk.lundogbendsen.demo.zplitter.rest.dto.ExpenseDto
 import dk.lundogbendsen.demo.zplitter.rest.dto.PersonDto
-import dk.lundogbendsen.demo.zplitter.rest.model.ExpenseModel
-import dk.lundogbendsen.demo.zplitter.rest.model.PersonModel
+import dk.lundogbendsen.demo.zplitter.rest.model.*
+import dk.lundogbendsen.demo.zplitter.rest.services.SettleService
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
 import org.springframework.http.HttpStatus
@@ -33,6 +32,25 @@ class Events {
 
     @Autowired
     lateinit var personRepo: PersonRepository
+
+    @Autowired
+    lateinit var settleService : SettleService
+
+    @Transactional
+    @GetMapping("/{id}/settle", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun settleById(@PathVariable("id") id: Long): ResponseEntity<EventModel> {
+        val eventOpt: Optional<Event?> = eventRepo.findById(id)
+        if (eventOpt.isPresent) {
+            val event = eventOpt.get()
+            val transfers = settleService.settleDebts(event)
+            val transferModels = transfers.map { transfer -> TransferModel(transfer.from, transfer.to, transfer.amount) }
+            val transfersModel = TransfersModel("Settlement plan for ${event.name}", event)
+            transfersModel.transfers.addAll(transferModels)
+            return ResponseEntity(getEventModel(eventOpt.get()), HttpStatus.OK);
+        } else {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
+    }
 
 
     @Transactional
@@ -66,7 +84,19 @@ class Events {
     }
 
     @Transactional
-    @PostMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE], consumes = [MediaType.APPLICATION_JSON_VALUE])
+    @GetMapping("/{eventId}/expenses/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun findExpenseById(@PathVariable("id") id: Long): ResponseEntity<EventModel> {
+        val event: Optional<Event?> = eventRepo.findById(id)
+        if (event.isPresent) {
+
+            return ResponseEntity(getEventModel(event.get()), HttpStatus.OK);
+        } else {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
+    }
+
+    @Transactional
+    @PostMapping("/{id}/expenses", produces = [MediaType.APPLICATION_JSON_VALUE], consumes = [MediaType.APPLICATION_JSON_VALUE])
     fun addExpense(@PathVariable("id") id: Long, @RequestBody expenseDto: ExpenseDto): ResponseEntity<ExpenseModel> {
         val eventOpt: Optional<Event?> = eventRepo.findById(id)
 
@@ -155,6 +185,33 @@ class Events {
     }
 
 
+    @Transactional
+    @GetMapping("/{id}/persons", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun listPersons(@PathVariable("id") id: Long): ResponseEntity<List<PersonModel>> {
+        val eventOpt = eventRepo.findById(id)
+        if (!eventOpt.isPresent) {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
+        val list = eventOpt.get().persons;
+        return ResponseEntity(list.map { it ->
+            getPersonModel(it?.id, it?.name ?: "")
+        }, HttpStatus.OK)
+    }
+
+    @Transactional
+    @GetMapping("/{id}/expenses", produces = [MediaType.APPLICATION_JSON_VALUE])
+    fun listExpenses(@PathVariable("id") id: Long): ResponseEntity<List<ExpenseModel>> {
+        val eventOpt = eventRepo.findById(id)
+        if (!eventOpt.isPresent) {
+            return ResponseEntity(HttpStatus.NOT_FOUND)
+        }
+        val list = eventOpt.get().expenses;
+        return ResponseEntity(list.map { it ->
+            getExpenseModel(it)
+        }, HttpStatus.OK)
+    }
+
+
     private fun getPersonModel(id: Long?, name: String): PersonModel {
         val personModel = PersonModel(id, name)
         if (id != null) {
@@ -162,6 +219,15 @@ class Events {
             personModel.add(linkToSelf)
         }
         return personModel
+    }
+
+    private fun getExpenseModel(expense : Expense): ExpenseModel {
+        val expenseModel = ExpenseModel(expense.id, expense.description, expense.amount)
+        if (expense.id != null) {
+            val linkToSelf = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(Expenses::class.java).findById(expense.id)).withSelfRel()
+            expenseModel.add(linkToSelf)
+        }
+        return expenseModel
     }
 
     private fun getEventModel(event: Event?): EventModel {

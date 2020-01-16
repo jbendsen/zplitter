@@ -3,7 +3,7 @@ package dk.lundogbendsen.demo.zplitter.model
 import javax.persistence.*
 
 @Entity
-class Person (
+data class Person (
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public val id: Long? = null,
